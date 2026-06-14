@@ -1,0 +1,9 @@
+Technical Specifications: 
+
+Develop a web application for sharing and storing culinary recipes where users can share their dishes, view recipes from other members, leave reviews, receive personalized recommendations, and use a "smart selection" feature to find dishes based on available ingredients. Implement both user and administrator interfaces. 
+
+Administrator functions: implement authentication; manage the database (add, delete, and modify recipes, categories, tags, and users); view all user profiles; block users; process recipe submission requests; moderate reviews and comments; handle complaints regarding recipes and users; manage categories, tags, cuisines, and basic ingredients; view application statistics (recipe count, user activity, popular categories); and delete or hide recipes and comments.
+
+Divide the user interface into guest and registered user sections. Guest functions: view recipes and the catalog; view recipe details (ingredients, preparation steps, photos); search for recipes by ingredients, tags, and categories; filter recipes by preparation time, calorie count, difficulty, and dietary requirements (vegan, vegetarian, gluten-free, lactose-free); view recipe ratings and reviews; and register/log in.
+
+Registered user functions: add recipes (including ingredients, steps, and photos); edit and delete their own recipes; use the "smart selection" feature (input available ingredients to have the system automatically suggest recipes); mark recipe statuses ("cooked," "want to cook"); save recipes to favorites; maintain a cooking history; add comments and ratings; receive personalized recommendations based on cooked and saved recipes; configure profile settings (culinary preferences, allergies, dietary restrictions); and subscribe to recipe authors with notifications for new posts. receiving notifications about new comments and ratings on one's own recipes; the ability to share recipes via links and social media.
