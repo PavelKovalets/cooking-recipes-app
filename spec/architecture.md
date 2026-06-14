@@ -1,6 +1,6 @@
 # Architecture
 
-Derived from [`objective.md`](./objective.md). `objective.md` is the fixed source of truth for *what* to build; this document defines *how*. Every component here traces back to a clause in the objective — see the [Traceability matrix](#traceability-matrix).
+Derived from [`objective.md`](./objective.md). `objective.md` is the fixed source of truth for *what* to build; this document defines *how*. Every component here traces back to a clause in the objective — see the [Traceability matrix](#traceability-matrix). The concrete technology stack and local-development setup are specified in [`local-dev.md`](./local-dev.md).
 
 ## 1. Guiding principles
 
