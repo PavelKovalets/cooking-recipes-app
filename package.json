@@ -1,0 +1,20 @@
+{
+  "name": "cooking-recipes-app",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @app/api migrate",
+    "db:seed": "pnpm --filter @app/api seed"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["argon2", "esbuild"]
+  }
+}

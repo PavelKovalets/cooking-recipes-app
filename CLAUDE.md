@@ -4,7 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-This is a **greenfield project**. As of this writing the repository contains only `spec/objective.md`, `README.md`, and `LICENSE` — there is no application code, build system, dependencies, or tests yet. The technology stack (language, framework, database, test runner) has **not** been chosen. Selecting it is part of the work, and once chosen this file should be updated with the actual build / lint / test / run commands.
+Phase 1 is **implemented and verified locally**. The app is a TypeScript ESM **pnpm monorepo**:
+- `api/` — Fastify 5 backend (Drizzle ORM + `pg` → PostgreSQL 16), modular by domain under `api/src/modules/*`. App is assembled by `buildApp()` in `api/src/app.ts`; `api/src/server.ts` is the entry. Cross-cutting code lives in `api/src/platform/*` (authz/RBAC, storage, errors, context).
+- `web/` — React 18 + Vite 5 SPA (`@tanstack/react-query`, `react-router-dom`). Routes/pages under `web/src/pages/*`; the typed API client mirroring `spec/api.md` is `web/src/lib/api.ts`.
+- `spec/` — derived specs: `architecture.md`, `api.md` (the contract the SPA is built against), `data-model.md` (18 tables), plus the fixed `objective.md` and `local-dev.md`.
+- 98 integration tests in `api/test/` exercise every `objective.md` requirement against a real seeded Postgres via `app.inject()`.
+
+### Toolchain & commands
+Toolchain is pinned by **mise** (`mise.toml`: node 22, pnpm 10). Prefix commands with `~/.local/bin/mise exec --` if mise isn't on PATH. Docker Engine runs Postgres.
+
+```bash
+# one-time host setup (Docker Engine + mise): scripts/setup-host.sh
+pnpm install                       # install workspace deps
+pnpm db:up                         # start Postgres (docker compose service "db")
+pnpm db:migrate                    # apply Drizzle migrations
+pnpm db:seed                       # idempotent truncate-then-insert demo fixtures
+pnpm dev                           # run api (:3000) + web (:5173) in parallel; Vite proxies /api -> :3000
+
+pnpm --filter @app/api test        # run the integration suite (reseeds DB first; needs db up)
+pnpm --filter @app/api test -- recipes   # run one test file (vitest name filter)
+pnpm build                         # tsc typecheck + vite build for both packages (the typecheck gate; no separate linter)
+```
+
+Env lives in `.env` at repo root (copy from `.env.example`): `DATABASE_URL`, `JWT_SECRET`, `STORAGE_*`, `PUBLIC_BASE_URL`, `ADMIN_EMAIL`/`ADMIN_PASSWORD` (seeded admin). The api dev/test/migrate/seed scripts read it via node `--env-file`; vitest loads it in `api/test/setup.ts`.
 
 ## How this project is meant to be built
 

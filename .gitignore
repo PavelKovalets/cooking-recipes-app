@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# mise
+.mise.local.toml
+
+# local dev media (filesystem BlobStore)
+/api/.storage/
+# test media (filesystem BlobStore during vitest)
+/api/.test-storage/
