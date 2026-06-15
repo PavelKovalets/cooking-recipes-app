@@ -9,9 +9,11 @@
     "generate": "drizzle-kit generate",
     "migrate": "tsx --env-file=../.env src/db/migrate.ts",
     "seed": "tsx --env-file=../.env src/db/seed.ts",
+    "bootstrap": "tsx --env-file=../.env src/db/bootstrap.ts",
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1068.0",
     "@fastify/cors": "^10.0.1",
     "@fastify/jwt": "^9.0.1",
     "@fastify/multipart": "^9.0.1",

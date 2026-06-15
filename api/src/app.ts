@@ -8,7 +8,9 @@
  * share pages at /r/:slug.
  */
 
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
@@ -34,7 +36,12 @@ import { socialRoutes } from "./modules/social/social.routes.js";
 import { userRoutes } from "./modules/users/user.routes.js";
 import { resolvePrincipal } from "./platform/authz.js";
 import { ApiError } from "./platform/errors.js";
-import { MAX_IMAGE_BYTES, LocalBlobStore } from "./platform/storage.js";
+import type { BlobStore } from "./platform/storage.js";
+import {
+  LocalBlobStore,
+  MAX_IMAGE_BYTES,
+  S3BlobStore,
+} from "./platform/storage.js";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -61,16 +68,44 @@ export async function buildApp(): Promise<FastifyInstance> {
     limits: { fileSize: MAX_IMAGE_BYTES, files: 1 },
   });
 
-  // BlobStore (local FS driver in Phase 1). Ensure the dir exists, then mount it.
-  const blobStore = new LocalBlobStore(env.STORAGE_LOCAL_DIR, env.PUBLIC_BASE_URL);
-  mkdirSync(blobStore.root, { recursive: true });
+  // BlobStore: S3-compatible bucket in production, local FS in dev. The local
+  // driver also mounts /media so the API can serve the files it writes.
+  let blobStore: BlobStore;
+  if (env.STORAGE_DRIVER === "s3") {
+    blobStore = new S3BlobStore({
+      endpoint: env.STORAGE_S3_ENDPOINT!,
+      region: env.STORAGE_S3_REGION,
+      bucket: env.STORAGE_S3_BUCKET!,
+      accessKeyId: env.STORAGE_S3_ACCESS_KEY_ID!,
+      secretAccessKey: env.STORAGE_S3_SECRET_ACCESS_KEY!,
+      publicBaseUrl: env.STORAGE_S3_PUBLIC_BASE_URL!,
+    });
+  } else {
+    const local = new LocalBlobStore(env.STORAGE_LOCAL_DIR, env.PUBLIC_BASE_URL);
+    mkdirSync(local.root, { recursive: true });
+    await app.register(fastifyStatic, {
+      root: local.root,
+      prefix: "/media/",
+      decorateReply: false,
+    });
+    blobStore = local;
+  }
   app.decorate("blobStore", blobStore);
 
-  await app.register(fastifyStatic, {
-    root: blobStore.root,
-    prefix: "/media/",
-    decorateReply: false,
-  });
+  // Serve the built SPA (production: the API and SPA share an origin). Skipped in
+  // dev, where Vite serves the SPA on :5173 and proxies /api here.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const spaDir = process.env.WEB_DIST_DIR
+    ? resolve(process.env.WEB_DIST_DIR)
+    : resolve(here, "../../web/dist");
+  const serveSpa = existsSync(join(spaDir, "index.html"));
+  if (serveSpa) {
+    await app.register(fastifyStatic, {
+      root: spaDir,
+      prefix: "/",
+      wildcard: false,
+    });
+  }
 
   /* ---- Principal resolution (runs for every request) ------------------- */
   app.addHook("onRequest", resolvePrincipal);
@@ -118,6 +153,17 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   app.setNotFoundHandler((request, reply) => {
+    // SPA history fallback: unknown non-API GET navigations return index.html so
+    // client-side routes (e.g. /recipes/123) resolve. Everything else is JSON 404.
+    if (
+      serveSpa &&
+      request.method === "GET" &&
+      !request.url.startsWith("/api") &&
+      !request.url.startsWith("/media") &&
+      (request.headers.accept ?? "").includes("text/html")
+    ) {
+      return reply.sendFile("index.html");
+    }
     reply.code(404).send({
       error: {
         code: "not_found",

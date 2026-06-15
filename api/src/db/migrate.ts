@@ -12,10 +12,15 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 
+import { pgPoolConfig } from "./connection.js";
+
 const { Pool } = pg;
 
 async function main(): Promise<void> {
-  const connectionString = process.env.DATABASE_URL;
+  // Prefer the unpooled connection for migrations; pooled endpoints (pgBouncer)
+  // can break Drizzle's migration statements. Falls back to DATABASE_URL.
+  const connectionString =
+    process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set. Provide it via the environment.");
   }
@@ -24,7 +29,7 @@ async function main(): Promise<void> {
   // ./drizzle lives at the api workspace root: src/db -> ../../drizzle
   const migrationsFolder = resolve(here, "../../drizzle");
 
-  const pool = new Pool({ connectionString });
+  const pool = new Pool(pgPoolConfig(connectionString));
   const db = drizzle(pool);
 
   console.log(`Applying migrations from ${migrationsFolder} ...`);

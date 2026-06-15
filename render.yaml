@@ -1,0 +1,54 @@
+# Render Blueprint (Infrastructure-as-Code) for the API + SPA.
+# The single web service builds both workspaces, serves the SPA same-origin, and
+# talks to Neon (Postgres) + Supabase Storage (media). Secrets are set in the
+# Render dashboard (sync:false) — they are never committed here.
+#
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: cooking-recipes-app
+    runtime: node
+    plan: free
+    region: oregon # change to your nearest: oregon | ohio | virginia | frankfurt | singapore
+    branch: main
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    # Migrations + admin bootstrap run before the server (Free has no pre-deploy
+    # hook). Both are idempotent, so re-running on each start is safe.
+    startCommand: node api/dist/db/migrate.js && node api/dist/db/bootstrap.js && node api/dist/server.js
+    healthCheckPath: /readyz
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: STORAGE_DRIVER
+        value: s3
+      # Generated once by Render and kept stable across deploys.
+      - key: JWT_SECRET
+        generateValue: true
+      # ---- Secrets / per-environment values: set these in the dashboard ----
+      - key: DATABASE_URL # Neon pooled connection string
+        sync: false
+      - key: DATABASE_URL_DIRECT # Neon direct (unpooled) string, for migrations
+        sync: false
+      - key: PUBLIC_BASE_URL # https://<your-service>.onrender.com
+        sync: false
+      - key: CORS_ORIGINS # same as PUBLIC_BASE_URL (SPA is same-origin)
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: STORAGE_S3_ENDPOINT # https://<ref>.supabase.co/storage/v1/s3
+        sync: false
+      - key: STORAGE_S3_REGION # your Supabase project region, e.g. us-east-1
+        sync: false
+      - key: STORAGE_S3_BUCKET # e.g. recipes-media
+        sync: false
+      - key: STORAGE_S3_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_S3_PUBLIC_BASE_URL # https://<ref>.supabase.co/storage/v1/object/public/recipes-media
+        sync: false

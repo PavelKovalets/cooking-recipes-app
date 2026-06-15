@@ -9,6 +9,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
+import { pgPoolConfig } from "./connection.js";
 import * as schema from "./schema.js";
 
 const { Pool } = pg;
@@ -21,7 +22,7 @@ if (!connectionString) {
 }
 
 /** Shared connection pool. The API tier is stateless; the pool is the only handle. */
-export const pool = new Pool({ connectionString });
+export const pool = new Pool(pgPoolConfig(connectionString));
 
 /** Drizzle client bound to the schema, so `db.query.*` relational helpers work. */
 export const db = drizzle(pool, { schema });
